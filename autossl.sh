@@ -131,16 +131,15 @@ cmd_issue() {
     select_panel "$primary"
 
     set +e
-    deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$SRC_CERT" "$SRC_CHAIN" \
-        "$PANEL_TARGET" 1
+    deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$PANEL_TARGET" 1
     rc=$?
     set -e
 
     if [[ "$rc" -eq 2 ]]; then
         log WARN "Existing certificates found in ${PANEL_TARGET}"
         if confirm "Overwrite existing certificates? (backup will be created)" "n"; then
-            deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$SRC_CERT" "$SRC_CHAIN" \
-                "$PANEL_TARGET" 0 || die "Deployment failed."
+            deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$PANEL_TARGET" 0 \
+                || die "Deployment failed."
         else
             log INFO "Deployment cancelled by user."
             exit 0

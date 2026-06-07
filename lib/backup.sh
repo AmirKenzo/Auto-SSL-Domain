@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # AutoSSL — certificate backup
 
-CERT_FILES=(fullchain.pem privkey.pem cert.pem chain.pem)
+CERT_FILES=(fullchain.pem privkey.pem)
 
 backup_existing_certs() {
     local target_dir="$1"
     local existing=() f ts backup_dir
 
     for f in "${CERT_FILES[@]}"; do
-        [[ -f "${target_dir}/${f}" ]] && existing+=("$f")
+        [[ -e "${target_dir}/${f}" ]] && existing+=("$f")
     done
 
     [[ ${#existing[@]} -eq 0 ]] && return 0
@@ -23,7 +23,8 @@ backup_existing_certs() {
 
     ensure_dir "$backup_dir"
     for f in "${existing[@]}"; do
-        cp -a "${target_dir}/${f}" "${backup_dir}/${f}"
-        log INFO "Backed up ${f} -> ${backup_dir}/"
+        cp -L "${target_dir}/${f}" "${backup_dir}/${f}" 2>/dev/null || \
+            cp -a "${target_dir}/${f}" "${backup_dir}/${f}"
+        log INFO "Backed up ${f}"
     done
 }

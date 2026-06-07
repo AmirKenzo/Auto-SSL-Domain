@@ -124,8 +124,6 @@ Each domain folder:
 ```
 fullchain.pem
 privkey.pem
-cert.pem
-chain.pem
 ```
 
 ## Cloudflare DNS (only for wildcard or `--dns`)

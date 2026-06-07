@@ -16,8 +16,7 @@ renew_one() {
 
     if [[ -n "$deploy_path" ]]; then
         set +e
-        deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$SRC_CERT" "$SRC_CHAIN" \
-            "$deploy_path" 0
+        deploy_certificates "$SRC_FULLCHAIN" "$SRC_PRIVKEY" "$deploy_path" 0
         rc=$?
         set -e
         [[ "$rc" -ne 0 ]] && { log ERROR "Redeploy failed: ${primary}"; return 1; }

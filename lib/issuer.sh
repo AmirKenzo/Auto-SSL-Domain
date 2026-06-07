@@ -91,11 +91,17 @@ issue_certbot() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
     else
-        if ! "${cmd[@]}"; then
-            die "certbot failed. Check: /var/log/letsencrypt/letsencrypt.log"
+        local rc=0
+        "${cmd[@]}" || rc=$?
+        _set_certbot_paths "$primary"
+        if [[ "$rc" -ne 0 ]]; then
+            if [[ -e "$SRC_FULLCHAIN" && -e "$SRC_PRIVKEY" ]]; then
+                log WARN "Certificate already valid — deploying existing cert."
+            else
+                die "certbot failed. Check: /var/log/letsencrypt/letsencrypt.log"
+            fi
         fi
     fi
-    _set_certbot_paths "$primary"
 }
 
 issue_acme_sh() {
