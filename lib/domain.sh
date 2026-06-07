@@ -40,7 +40,7 @@ validate_domains() {
     local d
     for d in "${DOMAINS[@]}"; do
         if ! validate_domain "$d"; then
-            log ERROR "Invalid domain format: $d"
+            log ERROR "Invalid domain: $d"
             return 1
         fi
     done
@@ -69,10 +69,8 @@ primary_domain() {
 
 prompt_domains() {
     echo ""
-    echo "Enter domain(s), separated by spaces."
-    echo "Examples:"
-    echo "  example.com"
-    echo "  example.com example.net"
-    echo "  *.example.com"
+    echo -e "  ${BOLD}Enter domain(s)${NC} ${DIM}(space-separated)${NC}"
+    echo -e "  ${DIM}e.g. example.com  |  example.com www.example.com  |  *.example.com${NC}"
+    echo ""
     normalize_domains "$(prompt "Domains")"
 }

@@ -8,14 +8,15 @@ select_panel() {
     local primary="$1" num custom target
 
     echo ""
-    echo "Where should the certificate be copied?"
-    echo "  [1] Marzban    → /var/lib/marzban/certs/${primary}/"
-    echo "  [2] Pasarguard → /var/lib/pasarguard/certs/${primary}/"
-    echo "  [3] Manual     → /etc/autossl/certs/${primary}/"
+    echo -e "  ${BOLD}Select deployment target:${NC}"
+    echo ""
+    echo -e "    ${GREEN}[1]${NC} Marzban     ${DIM}→ /var/lib/marzban/certs/${primary}/${NC}"
+    echo -e "    ${GREEN}[2]${NC} Pasarguard  ${DIM}→ /var/lib/pasarguard/certs/${primary}/${NC}"
+    echo -e "    ${GREEN}[3]${NC} Manual      ${DIM}→ /etc/autossl/certs/${primary}/${NC}"
     echo ""
 
     while true; do
-        read -rp "Choice [1-3] (default 3): " num
+        read -rp "$(echo -e "  ${CYAN}›${NC} Choice ${DIM}[1-3, default 3]${NC}: ")" num
         num="${num:-3}"
         case "$num" in
             1) PANEL_NAME="marzban";    target="/var/lib/marzban/certs/${primary}"; break ;;
@@ -26,11 +27,11 @@ select_panel() {
                 target="${custom:-/etc/autossl/certs/${primary}}"
                 break
                 ;;
-            *) echo "Invalid. Enter 1, 2, or 3." ;;
+            *) echo -e "  ${RED}✖${NC}  Invalid. Enter 1, 2, or 3." ;;
         esac
     done
 
-    can_create_dir "$target" || die "Cannot create directory: ${target}"
+    can_create_dir "$target" || die "Cannot create: ${target}"
     ensure_dir "$target"
     PANEL_TARGET="$target"
     log INFO "Deploy target: ${PANEL_TARGET}"

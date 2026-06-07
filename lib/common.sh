@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AutoSSL — shared utilities
 
-AUTOSSL_VERSION="2.2.0"
+AUTOSSL_VERSION="2.3.0"
 AUTOSSL_BASE="${AUTOSSL_BASE:-/etc/autossl}"
 AUTOSSL_CERTS="${AUTOSSL_BASE}/certs"
 AUTOSSL_STATE="${AUTOSSL_BASE}/state"
@@ -16,7 +16,10 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
 log() {
@@ -26,11 +29,11 @@ log() {
     ts="$(date '+%Y-%m-%d %H:%M:%S')"
     echo -e "${ts} [${level}] ${msg}" >> "$AUTOSSL_LOG_FILE" 2>/dev/null || true
     case "$level" in
-        INFO)    echo -e "${GREEN}[INFO]${NC} ${msg}" ;;
-        WARN)    echo -e "${YELLOW}[WARN]${NC} ${msg}" ;;
-        ERROR)   echo -e "${RED}[ERROR]${NC} ${msg}" ;;
-        DEBUG)   [[ "$VERBOSE" -eq 1 ]] && echo -e "${CYAN}[DEBUG]${NC} ${msg}" ;;
-        DRY-RUN) echo -e "${CYAN}[DRY-RUN]${NC} ${msg}" ;;
+        INFO)    echo -e "  ${GREEN}✔${NC}  ${msg}" ;;
+        WARN)    echo -e "  ${YELLOW}⚠${NC}  ${msg}" ;;
+        ERROR)   echo -e "  ${RED}✖${NC}  ${msg}" ;;
+        DEBUG)   [[ "$VERBOSE" -eq 1 ]] && echo -e "  ${CYAN}●${NC}  ${msg}" ;;
+        DRY-RUN) echo -e "  ${CYAN}○${NC}  ${msg}" ;;
     esac
 }
 
@@ -40,12 +43,12 @@ die() {
 }
 
 ensure_dir() {
-    local dir="$1"
+    local path="$1"
     if [[ "$DRY_RUN" -eq 1 ]]; then
-        log DRY-RUN "Would create directory: $dir"
+        log DRY-RUN "Would create: ${path}"
         return 0
     fi
-    mkdir -p "$dir" || die "Failed to create directory: $dir"
+    mkdir -p "$path" || die "Failed to create: ${path}"
 }
 
 command_exists() {
@@ -57,7 +60,8 @@ is_linux() {
 }
 
 can_create_dir() {
-    local dir="$1" parent="$dir"
+    local path="$1"
+    local parent="$path"
     while [[ ! -e "$parent" && "$parent" != "/" ]]; do
         parent="$(dirname "$parent")"
     done
@@ -66,24 +70,24 @@ can_create_dir() {
 
 print_banner() {
     echo ""
-    echo "============================================================"
-    echo "  AutoSSL v${AUTOSSL_VERSION} — Let's Encrypt Automation"
-    echo "============================================================"
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${NC}  ${BOLD}${MAGENTA}AutoSSL${NC} ${DIM}v${AUTOSSL_VERSION}${NC}  ${BLUE}— Let's Encrypt SSL Manager${NC}      ${CYAN}║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
 
 progress() {
     local step="$1" total="$2" msg="$3"
     echo ""
-    echo -e "${BOLD}[${step}/${total}] ${msg}${NC}"
-    echo "----------------------------------------"
+    echo -e "  ${BOLD}${BLUE}▶ Step ${step}/${total}${NC}  ${msg}"
+    echo -e "  ${DIM}────────────────────────────────────────${NC}"
 }
 
 confirm() {
     local msg="$1" default="${2:-n}"
     local hint
-    [[ "$default" == "y" ]] && hint="Y/n" || hint="y/N"
-    read -rp "${msg} (${hint}): " ans
+    if [[ "$default" == "y" ]]; then hint="Y/n"; else hint="y/N"; fi
+    read -rp "$(echo -e "  ${YELLOW}?${NC} ${msg} (${hint}): ")" ans
     ans="${ans:-$default}"
     [[ "$ans" =~ ^[Yy] ]]
 }
@@ -91,9 +95,22 @@ confirm() {
 prompt() {
     local msg="$1" default="${2:-}"
     local suffix=""
-    [[ -n "$default" ]] && suffix=" [${default}]"
-    read -rp "${msg}${suffix}: " val
+    if [[ -n "$default" ]]; then suffix=" [${default}]"; fi
+    read -rp "$(echo -e "  ${CYAN}›${NC} ${msg}${suffix}: ")" val
     echo "${val:-$default}"
+}
+
+print_success_box() {
+    local primary="$1" panel="$2" target="$3"
+    echo ""
+    echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║${NC}  ${BOLD}Certificate installed successfully!${NC}                      ${GREEN}║${NC}"
+    echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
+    printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Domain:" "$primary"
+    printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Panel:" "$panel"
+    printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Path:" "$target"
+    echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo ""
 }
 
 init_autossl() {

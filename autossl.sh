@@ -27,6 +27,8 @@ source "${AUTOSSL_INSTALL_DIR}/lib/expiration.sh"
 source "${AUTOSSL_INSTALL_DIR}/lib/renewal.sh"
 # shellcheck source=lib/manage.sh
 source "${AUTOSSL_INSTALL_DIR}/lib/manage.sh"
+# shellcheck source=lib/list.sh
+source "${AUTOSSL_INSTALL_DIR}/lib/list.sh"
 
 COMMAND="issue"
 BACKEND_FORCE="auto"
@@ -43,6 +45,7 @@ Usage:
 
 Commands:
   issue              Issue a new certificate (interactive, default)
+  list               List all certificates, domains & expiry
   renew              Renew tracked certificate(s)
   check              Check certificate expiration
   update             Update AutoSSL to latest version
@@ -62,6 +65,7 @@ Examples:
   autossl
   autossl issue
   autossl --dry-run issue
+  autossl list
   autossl renew -d example.com
   autossl check --warn-days 14
   autossl update
@@ -81,7 +85,7 @@ parse_args() {
             --dns)        CHALLENGE_MODE="dns"; shift ;;
             -d|--domain)  TARGET_DOMAIN="$2"; shift 2 ;;
             --warn-days)  WARN_DAYS="$2"; shift 2 ;;
-            issue|renew|check|update|uninstall)
+            issue|list|renew|check|update|uninstall)
                 COMMAND="$1"; shift ;;
             issue-advanced)
                 COMMAND="issue"; shift ;;
@@ -150,19 +154,7 @@ cmd_issue() {
     check_expiration "${PANEL_TARGET}/fullchain.pem" 30
     save_cert_state "$primary" "$domains_str" "$PANEL_NAME" "$PANEL_TARGET" "$ISSUER_BACKEND"
 
-    echo ""
-    echo "============================================================"
-    echo "  Certificate installation complete!"
-    echo "============================================================"
-    echo "  Domain:     ${primary}"
-    echo "  Panel:      ${PANEL_NAME}"
-    echo "  Path:       ${PANEL_TARGET}"
-    echo "  fullchain:  ${PANEL_TARGET}/fullchain.pem"
-    echo "  privkey:    ${PANEL_TARGET}/privkey.pem"
-    echo "  cert:       ${PANEL_TARGET}/cert.pem"
-    echo "  chain:      ${PANEL_TARGET}/chain.pem"
-    echo "============================================================"
-    echo ""
+    print_success_box "$primary" "$PANEL_NAME" "$PANEL_TARGET"
 }
 
 cmd_renew() {
@@ -202,6 +194,7 @@ main() {
 
     case "$COMMAND" in
         issue)     cmd_issue ;;
+        list)      cmd_list ;;
         renew)     cmd_renew ;;
         check)     cmd_check ;;
         update)    cmd_update ;;

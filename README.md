@@ -87,6 +87,14 @@ sudo autossl --backend certbot issue
 sudo autossl --backend acme.sh issue
 ```
 
+### List certificates
+
+```bash
+sudo autossl list
+```
+
+Shows all certs, domains (SAN), panel path, expiry date and days remaining.
+
 ### Renew & check
 
 ```bash
