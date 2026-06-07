@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AutoSSL — shared utilities
 
-AUTOSSL_VERSION="2.3.1"
+AUTOSSL_VERSION="2.3.2"
 AUTOSSL_BASE="${AUTOSSL_BASE:-/etc/autossl}"
 AUTOSSL_CERTS="${AUTOSSL_BASE}/certs"
 AUTOSSL_STATE="${AUTOSSL_BASE}/state"
@@ -102,13 +102,32 @@ prompt() {
 
 print_success_box() {
     local primary="$1" panel="$2" target="$3"
+    local fullchain="${target}/fullchain.pem"
+    local privkey="${target}/privkey.pem"
+    local days validity
+
+    days="$(days_until_expiry "$fullchain" 2>/dev/null || echo -1)"
+    if [[ "$days" -ge 0 ]]; then
+        validity="${days} days"
+    else
+        validity="—"
+    fi
+
     echo ""
     echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║${NC}  ${BOLD}Certificate installed successfully!${NC}                      ${GREEN}║${NC}"
     echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
     printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Domain:" "$primary"
     printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Panel:" "$panel"
-    printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Path:" "$target"
+    printf "${GREEN}║${NC}  %-12s ${CYAN}%s${NC}\n" "Valid for:" "$validity"
+    echo -e "${GREEN}╠══════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${GREEN}║${NC}  ${BOLD}Use these paths in your panel:${NC}                         ${GREEN}║${NC}"
+    echo -e "${GREEN}║${NC}                                                          ${GREEN}║${NC}"
+    echo -e "${GREEN}║${NC}  ${DIM}Fullchain:${NC}                                              ${GREEN}║${NC}"
+    echo -e "${GREEN}║${NC}  ${CYAN}${fullchain}${NC}"
+    echo -e "${GREEN}║${NC}                                                          ${GREEN}║${NC}"
+    echo -e "${GREEN}║${NC}  ${DIM}Privkey:${NC}                                                ${GREEN}║${NC}"
+    echo -e "${GREEN}║${NC}  ${CYAN}${privkey}${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }

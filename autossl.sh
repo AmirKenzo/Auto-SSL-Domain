@@ -150,9 +150,7 @@ cmd_issue() {
 
     progress 4 4 "Done"
     domains_str="$(domains_to_string)"
-    check_expiration "${PANEL_TARGET}/fullchain.pem" 30
     save_cert_state "$primary" "$domains_str" "$PANEL_NAME" "$PANEL_TARGET" "$ISSUER_BACKEND"
-
     print_success_box "$primary" "$PANEL_NAME" "$PANEL_TARGET"
 }
 
