@@ -96,6 +96,13 @@ sudo autossl check
 sudo autossl check -d example.com --warn-days 14
 ```
 
+### Update & uninstall
+
+```bash
+sudo autossl update       # pull latest from GitHub
+sudo autossl uninstall    # remove tool (asks before deleting config)
+```
+
 ## Deployment Paths
 
 | Panel       | Path                                      |

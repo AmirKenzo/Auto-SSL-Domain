@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AutoSSL — shared utilities
 
-AUTOSSL_VERSION="2.1.0"
+AUTOSSL_VERSION="2.2.0"
 AUTOSSL_BASE="${AUTOSSL_BASE:-/etc/autossl}"
 AUTOSSL_CERTS="${AUTOSSL_BASE}/certs"
 AUTOSSL_STATE="${AUTOSSL_BASE}/state"
@@ -56,11 +56,12 @@ is_linux() {
     [[ -f /etc/os-release ]]
 }
 
-is_writable() {
-    local path="$1"
-    local check="$path"
-    [[ ! -e "$path" ]] && check="$(dirname "$path")"
-    [[ -w "$check" ]]
+can_create_dir() {
+    local dir="$1" parent="$dir"
+    while [[ ! -e "$parent" && "$parent" != "/" ]]; do
+        parent="$(dirname "$parent")"
+    done
+    [[ -w "$parent" ]]
 }
 
 print_banner() {

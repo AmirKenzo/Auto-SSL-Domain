@@ -25,6 +25,8 @@ source "${AUTOSSL_INSTALL_DIR}/lib/state.sh"
 source "${AUTOSSL_INSTALL_DIR}/lib/expiration.sh"
 # shellcheck source=lib/renewal.sh
 source "${AUTOSSL_INSTALL_DIR}/lib/renewal.sh"
+# shellcheck source=lib/manage.sh
+source "${AUTOSSL_INSTALL_DIR}/lib/manage.sh"
 
 COMMAND="issue"
 BACKEND_FORCE="auto"
@@ -43,6 +45,8 @@ Commands:
   issue              Issue a new certificate (interactive, default)
   renew              Renew tracked certificate(s)
   check              Check certificate expiration
+  update             Update AutoSSL to latest version
+  uninstall          Remove AutoSSL from server
 
 Options:
   -h, --help         Show this help
@@ -60,6 +64,8 @@ Examples:
   autossl --dry-run issue
   autossl renew -d example.com
   autossl check --warn-days 14
+  autossl update
+  autossl uninstall
 EOF
 }
 
@@ -75,7 +81,7 @@ parse_args() {
             --dns)        CHALLENGE_MODE="dns"; shift ;;
             -d|--domain)  TARGET_DOMAIN="$2"; shift 2 ;;
             --warn-days)  WARN_DAYS="$2"; shift 2 ;;
-            issue|renew|check)
+            issue|renew|check|update|uninstall)
                 COMMAND="$1"; shift ;;
             issue-advanced)
                 COMMAND="issue"; shift ;;
@@ -195,10 +201,12 @@ main() {
     init_autossl
 
     case "$COMMAND" in
-        issue) cmd_issue ;;
-        renew) cmd_renew ;;
-        check) cmd_check ;;
-        *)     cmd_issue ;;
+        issue)     cmd_issue ;;
+        renew)     cmd_renew ;;
+        check)     cmd_check ;;
+        update)    cmd_update ;;
+        uninstall) cmd_uninstall ;;
+        *)         cmd_issue ;;
     esac
 }
 

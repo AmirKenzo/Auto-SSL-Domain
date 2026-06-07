@@ -9,13 +9,8 @@ deploy_certificates() {
     local target_dir="$5"
     local confirm_overwrite="${6:-1}"
 
-    local f writable_check="${target_dir}"
-    [[ ! -e "$target_dir" ]] && writable_check="$(dirname "$target_dir")"
-
-    if ! is_writable "$writable_check"; then
-        log ERROR "No write permission for: ${writable_check}"
-        return 1
-    fi
+    local f
+    can_create_dir "$target_dir" || { log ERROR "Cannot write to: ${target_dir}"; return 1; }
 
     for f in "$src_fullchain" "$src_privkey" "$src_cert" "$src_chain"; do
         [[ ! -f "$f" ]] && { log ERROR "Missing source file: $f"; return 1; }

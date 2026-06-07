@@ -5,7 +5,7 @@ PANEL_NAME=""
 PANEL_TARGET=""
 
 select_panel() {
-    local primary="$1" num custom target check_path
+    local primary="$1" num custom target
 
     echo ""
     echo "Where should the certificate be copied?"
@@ -30,10 +30,8 @@ select_panel() {
         esac
     done
 
-    check_path="$target"
-    [[ ! -e "$target" ]] && check_path="$(dirname "$target")"
-    is_writable "$check_path" || die "Path not writable: ${check_path}"
-
+    can_create_dir "$target" || die "Cannot create directory: ${target}"
+    ensure_dir "$target"
     PANEL_TARGET="$target"
     log INFO "Deploy target: ${PANEL_TARGET}"
 }
