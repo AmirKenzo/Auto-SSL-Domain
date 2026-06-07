@@ -1,0 +1,9 @@
+# Copy to /etc/autossl/cloudflare.ini and set your credentials.
+# chmod 600 /etc/autossl/cloudflare.ini
+
+# Recommended: API Token with Zone:DNS:Edit permission
+dns_cloudflare_api_token = YOUR_CLOUDFLARE_API_TOKEN
+
+# Alternative: Global API Key
+# dns_cloudflare_email = admin@example.com
+# dns_cloudflare_api_key = YOUR_GLOBAL_API_KEY
