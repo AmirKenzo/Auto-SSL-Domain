@@ -12,8 +12,6 @@ _acme_bin() {
         echo "${HOME}/.acme.sh/acme.sh"
     elif [[ -f "/root/.acme.sh/acme.sh" ]]; then
         echo "/root/.acme.sh/acme.sh"
-    else
-        echo ""
     fi
 }
 
@@ -28,13 +26,13 @@ detect_issuer() {
             [[ -n "$(_acme_bin)" ]] || die "acme.sh not found."
             ISSUER_BACKEND="acme.sh"
             ;;
-        auto|*)
+        *)
             if command_exists certbot; then
                 ISSUER_BACKEND="certbot"
             elif [[ -n "$(_acme_bin)" ]]; then
                 ISSUER_BACKEND="acme.sh"
             else
-                die "No certificate issuer found. Install certbot or acme.sh first."
+                die "No certificate issuer found. Install certbot or acme.sh."
             fi
             ;;
     esac
@@ -42,8 +40,7 @@ detect_issuer() {
 }
 
 _set_certbot_paths() {
-    local primary="$1"
-    local base="/etc/letsencrypt/live/${primary}"
+    local base="/etc/letsencrypt/live/$1"
     SRC_FULLCHAIN="${base}/fullchain.pem"
     SRC_PRIVKEY="${base}/privkey.pem"
     SRC_CERT="${base}/cert.pem"
@@ -51,96 +48,94 @@ _set_certbot_paths() {
 }
 
 _set_acme_paths() {
-    local primary="$1"
-    local base
-    base="$(dirname "$(_acme_bin)")/${primary}_ecc"
+    local base="$(dirname "$(_acme_bin)")/$1_ecc"
     SRC_FULLCHAIN="${base}/fullchain.cer"
-    SRC_PRIVKEY="${base}/${primary}.key"
-    SRC_CERT="${base}/${primary}.cer"
+    SRC_PRIVKEY="${base}/$1.key"
+    SRC_CERT="${base}/$1.cer"
     SRC_CHAIN="${base}/ca.cer"
+}
+
+# DNS only for wildcard (*.domain) or --dns flag. Normal domains use HTTP (no API key).
+_use_dns_challenge() {
+    has_wildcard && return 0
+    [[ "${CHALLENGE_MODE:-}" == "dns" ]] && return 0
+    return 1
 }
 
 issue_certbot() {
     local primary="$1"
     local email="${AUTOSSL_EMAIL:-admin@${primary}}"
-    local -a cmd args=()
-    local d use_dns=0
+    local -a cmd args
+    local d challenge="HTTP"
 
-    if has_wildcard; then
-        detect_dns_provider || die "Wildcard requires DNS challenge. Configure Cloudflare credentials."
-        use_dns=1
-    elif detect_dns_provider; then
-        use_dns=1
+    if _use_dns_challenge; then
+        detect_dns_provider || die "Wildcard/DNS mode needs Cloudflare API token (CF_Token or /etc/autossl/cloudflare.ini)."
+        read -ra args <<< "$(cloudflare_certbot_args)"
+        challenge="DNS"
     fi
 
     cmd=(certbot certonly --non-interactive --agree-tos --email "$email" --cert-name "$primary")
-    [[ "$DRY_RUN" -eq 1 ]] && cmd+=(--dry-run)
-    [[ "$FORCE" -eq 1 ]] && cmd+=(--force-renewal)
+    if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--dry-run); fi
+    if [[ "$FORCE" -eq 1 ]];  then cmd+=(--force-renewal); fi
+    for d in "${DOMAINS[@]}"; do cmd+=(-d "$d"); done
 
-    for d in "${DOMAINS[@]}"; do
-        cmd+=(-d "$d")
-    done
-
-    if [[ "$use_dns" -eq 1 ]]; then
-        read -ra args <<< "$(cloudflare_certbot_args)"
+    if [[ "$challenge" == "DNS" ]]; then
         cloudflare_prepare_env
         cmd+=("${args[@]}")
     else
         cmd+=(--standalone --preferred-challenges http)
+        log INFO "HTTP challenge — port 80 must be free (no API key needed)."
     fi
 
-    log INFO "Issuing certificate via certbot (${use_dns:+DNS}${use_dns:-HTTP} challenge)..."
+    log INFO "Issuing certificate via certbot (${challenge} challenge)..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
     else
-        "${cmd[@]}" || die "certbot issuance failed."
+        if ! "${cmd[@]}"; then
+            die "certbot failed. Check: /var/log/letsencrypt/letsencrypt.log"
+        fi
     fi
     _set_certbot_paths "$primary"
 }
 
 issue_acme_sh() {
-    local primary="$1"
-    local acme="$(_acme_bin)"
-    local -a cmd=()
-    local d use_dns=0
+    local primary="$1" acme="$(_acme_bin)"
+    local -a cmd
+    local d challenge="HTTP"
 
-    if has_wildcard; then
-        detect_dns_provider || die "Wildcard requires DNS challenge. Set CF_Token or configure cloudflare.ini."
-        use_dns=1
-    elif detect_dns_provider; then
-        use_dns=1
+    if _use_dns_challenge; then
+        detect_dns_provider || die "Wildcard/DNS mode needs CF_Token."
+        challenge="DNS"
     fi
 
     cmd=("$acme" --issue)
-    for d in "${DOMAINS[@]}"; do
-        cmd+=(-d "$d")
-    done
-
-    if [[ "$use_dns" -eq 1 ]]; then
+    for d in "${DOMAINS[@]}"; do cmd+=(-d "$d"); done
+    if [[ "$challenge" == "DNS" ]]; then
         cloudflare_prepare_env
         cmd+=(--dns "$DNS_ACME_HOOK")
     else
         cmd+=(--standalone)
+        log INFO "HTTP challenge — port 80 must be free (no API key needed)."
     fi
+    if [[ "$FORCE" -eq 1 ]]; then cmd+=(--force); fi
+    if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--test); fi
 
-    [[ "$FORCE" -eq 1 ]] && cmd+=(--force)
-    [[ "$DRY_RUN" -eq 1 ]] && cmd+=(--test)
-
-    log INFO "Issuing certificate via acme.sh..."
+    log INFO "Issuing certificate via acme.sh (${challenge} challenge)..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
     else
-        "${cmd[@]}" || die "acme.sh issuance failed."
+        if ! "${cmd[@]}"; then
+            die "acme.sh failed."
+        fi
     fi
     _set_acme_paths "$primary"
 }
 
 issue_certificate() {
-    local primary
-    primary="$(primary_domain)"
+    local primary="$(primary_domain)"
     case "$ISSUER_BACKEND" in
-        certbot)  issue_certbot "$primary" ;;
-        acme.sh)  issue_acme_sh "$primary" ;;
+        certbot) issue_certbot "$primary" ;;
+        acme.sh) issue_acme_sh "$primary" ;;
         *) die "Unknown issuer: ${ISSUER_BACKEND}" ;;
     esac
 }
@@ -148,30 +143,27 @@ issue_certificate() {
 renew_certbot() {
     local primary="$1"
     local -a cmd=(certbot renew --cert-name "$primary" --non-interactive)
-    [[ "$DRY_RUN" -eq 1 ]] && cmd+=(--dry-run)
-    [[ "$FORCE" -eq 1 ]] && cmd+=(--force-renewal)
+    if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--dry-run); fi
+    if [[ "$FORCE" -eq 1 ]];  then cmd+=(--force-renewal); fi
     log INFO "Renewing ${primary} via certbot..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
-    else
-        "${cmd[@]}" || return 1
+    elif ! "${cmd[@]}"; then
+        return 1
     fi
     _set_certbot_paths "$primary"
-    return 0
 }
 
 renew_acme_sh() {
-    local primary="$1"
-    local acme="$(_acme_bin)"
+    local primary="$1" acme="$(_acme_bin)"
     local -a cmd=("$acme" --renew -d "$primary")
-    [[ "$FORCE" -eq 1 ]] && cmd+=(--force)
-    [[ "$DRY_RUN" -eq 1 ]] && cmd+=(--test)
+    if [[ "$FORCE" -eq 1 ]]; then cmd+=(--force); fi
+    if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--test); fi
     log INFO "Renewing ${primary} via acme.sh..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
-    else
-        "${cmd[@]}" || return 1
+    elif ! "${cmd[@]}"; then
+        return 1
     fi
     _set_acme_paths "$primary"
-    return 0
 }

@@ -51,12 +51,27 @@ sudo autossl issue
 # Enter: example.com www.example.com api.example.com
 ```
 
-### Wildcard (DNS — Cloudflare)
+### Normal domains — no API key (HTTP, default)
+
+Port 80 must be free. No Cloudflare token needed.
+
+```bash
+sudo autossl issue
+# Enter: example.com www.example.com
+```
+
+### Wildcard — DNS only (needs Cloudflare API)
 
 ```bash
 export CF_Token="your_cloudflare_api_token"
 sudo autossl issue
 # Enter: *.example.com example.com
+```
+
+### Force DNS challenge (optional)
+
+```bash
+sudo autossl --dns issue
 ```
 
 ### Dry-run
@@ -98,18 +113,13 @@ cert.pem
 chain.pem
 ```
 
-## Cloudflare DNS Setup
+## Cloudflare DNS (only for wildcard or `--dns`)
 
-```bash
-sudo cp config/cloudflare.ini.example /etc/autossl/cloudflare.ini
-sudo chmod 600 /etc/autossl/cloudflare.ini
-sudo nano /etc/autossl/cloudflare.ini
-```
-
-Or:
+Not required for normal domains. Only needed for `*.example.com` or `autossl --dns`.
 
 ```bash
 export CF_Token="your_api_token"
+# or edit /etc/autossl/cloudflare.ini
 ```
 
 ## Manual Renewal
