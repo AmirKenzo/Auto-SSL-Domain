@@ -28,6 +28,7 @@ source "${AUTOSSL_INSTALL_DIR}/lib/renewal.sh"
 
 COMMAND="issue"
 BACKEND_FORCE="auto"
+CHALLENGE_MODE="http"
 TARGET_DOMAIN=""
 WARN_DAYS=30
 
@@ -50,6 +51,7 @@ Options:
   -n, --dry-run      Simulate without making changes
   -f, --force        Force renewal/overwrite without prompt
   --backend NAME     Force issuer: certbot | acme.sh
+  --dns              Use DNS challenge (Cloudflare API — for wildcard)
   -d, --domain NAME  Target domain (renew/check)
 
 Examples:
@@ -70,6 +72,7 @@ parse_args() {
             -n|--dry-run) DRY_RUN=1; shift ;;
             -f|--force)   FORCE=1; shift ;;
             --backend)    BACKEND_FORCE="$2"; shift 2 ;;
+            --dns)        CHALLENGE_MODE="dns"; shift ;;
             -d|--domain)  TARGET_DOMAIN="$2"; shift 2 ;;
             --warn-days)  WARN_DAYS="$2"; shift 2 ;;
             issue|renew|check)
@@ -90,7 +93,7 @@ cmd_issue() {
 
     progress 1 4 "Domain input & validation"
     prompt_domains
-    [[ ${#DOMAINS[@]} -eq 0 ]] && die "No domains provided."
+    if [[ ${#DOMAINS[@]} -eq 0 ]]; then die "No domains provided."; fi
     validate_domains || exit 1
 
     primary="$(primary_domain)"
@@ -98,8 +101,10 @@ cmd_issue() {
     log INFO "Primary domain (folder name): ${primary}"
 
     if has_wildcard; then
-        log INFO "Wildcard detected — DNS challenge required."
-        detect_dns_provider || die "No DNS provider for wildcard. Set CF_Token or /etc/autossl/cloudflare.ini"
+        CHALLENGE_MODE="dns"
+        log INFO "Wildcard — DNS challenge required (Cloudflare API token needed)."
+    else
+        log INFO "HTTP challenge (default) — no API key needed, port 80 must be free."
     fi
 
     progress 2 4 "Issuing certificate"
@@ -182,7 +187,7 @@ cmd_check() {
         check_expiration "${deploy_path}/fullchain.pem" "$WARN_DAYS"
     done < <(list_tracked_domains)
 
-    [[ "$found" -eq 0 ]] && die "No tracked certificates."
+    if [[ "$found" -eq 0 ]]; then die "No tracked certificates."; fi
 }
 
 main() {
