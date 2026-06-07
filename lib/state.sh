@@ -20,6 +20,8 @@ domains="${domains_str}"
 panel="${panel}"
 deploy_path="${deploy_path}"
 backend="${backend}"
+challenge="${CHALLENGE_MODE:-http}"
+dns_backend="${DNS_BACKEND:-}"
 updated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 EOF
     chmod 600 "$state_file"

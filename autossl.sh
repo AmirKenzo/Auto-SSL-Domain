@@ -58,7 +58,7 @@ Options:
   -n, --dry-run      Simulate without making changes
   -f, --force        Force renewal/overwrite without prompt
   --backend NAME     Force issuer: certbot | acme.sh
-  --dns              Use DNS challenge (Cloudflare API — for wildcard)
+  --dns              Use DNS challenge (manual TXT if no API key)
   -d, --domain NAME  Target domain (renew/check)
 
 Examples:
@@ -112,7 +112,11 @@ cmd_issue() {
 
     if has_wildcard; then
         CHALLENGE_MODE="dns"
-        log INFO "Wildcard — DNS challenge required (Cloudflare API token needed)."
+        if has_cloudflare_api; then
+            log INFO "Wildcard — DNS challenge via Cloudflare API."
+        else
+            log INFO "Wildcard — manual DNS challenge (TXT record, no API key)."
+        fi
     else
         log INFO "HTTP challenge (default) — no API key needed, port 80 must be free."
     fi

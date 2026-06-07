@@ -60,7 +60,15 @@ sudo autossl issue
 # Enter: example.com www.example.com
 ```
 
-### Wildcard — DNS only (needs Cloudflare API)
+### Wildcard — manual DNS (no API key)
+
+```bash
+sudo autossl issue
+# Enter: *.example.com example.com
+# Add TXT record when prompted, then press Enter
+```
+
+### Wildcard — automatic DNS (optional Cloudflare API)
 
 ```bash
 export CF_Token="your_cloudflare_api_token"
@@ -68,10 +76,11 @@ sudo autossl issue
 # Enter: *.example.com example.com
 ```
 
-### Force DNS challenge (optional)
+### Force DNS challenge for normal domains
 
 ```bash
 sudo autossl --dns issue
+# Manual TXT if no API key, automatic if CF_Token is set
 ```
 
 ### Dry-run
@@ -126,13 +135,15 @@ fullchain.pem
 privkey.pem
 ```
 
-## Cloudflare DNS (only for wildcard or `--dns`)
+## Cloudflare API (optional)
 
-Not required for normal domains. Only needed for `*.example.com` or `autossl --dns`.
+Never required. Without API key, DNS challenges use **manual TXT records**.
+
+Set API key only if you want automatic DNS:
 
 ```bash
 export CF_Token="your_api_token"
-# or edit /etc/autossl/cloudflare.ini
+# or edit /etc/autossl/cloudflare.ini (uncomment and set token)
 ```
 
 ## Manual Renewal

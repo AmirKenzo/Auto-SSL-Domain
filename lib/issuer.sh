@@ -2,6 +2,7 @@
 # AutoSSL — certbot & acme.sh issuance
 
 ISSUER_BACKEND=""
+DNS_BACKEND=""
 SRC_FULLCHAIN=""
 SRC_PRIVKEY=""
 SRC_CERT=""
@@ -55,53 +56,67 @@ _set_acme_paths() {
     SRC_CHAIN="${base}/ca.cer"
 }
 
-# DNS only for wildcard (*.domain) or --dns flag. Normal domains use HTTP (no API key).
 _use_dns_challenge() {
     has_wildcard && return 0
     [[ "${CHALLENGE_MODE:-}" == "dns" ]] && return 0
     return 1
 }
 
+_certbot_issue_result() {
+    local primary="$1" rc="$2"
+    _set_certbot_paths "$primary"
+    if [[ "$rc" -ne 0 ]]; then
+        if [[ -e "$SRC_FULLCHAIN" && -e "$SRC_PRIVKEY" ]]; then
+            log WARN "Certificate already valid — deploying existing cert."
+        else
+            die "certbot failed. Check: /var/log/letsencrypt/letsencrypt.log"
+        fi
+    fi
+}
+
 issue_certbot() {
     local primary="$1"
     local email="${AUTOSSL_EMAIL:-admin@${primary}}"
-    local -a cmd args
+    local -a cmd cf_args
     local d challenge="HTTP"
 
     if _use_dns_challenge; then
-        detect_dns_provider || die "Wildcard/DNS mode needs Cloudflare API token (CF_Token or /etc/autossl/cloudflare.ini)."
-        read -ra args <<< "$(cloudflare_certbot_args)"
         challenge="DNS"
+        DNS_BACKEND="$(resolve_dns_backend)"
     fi
 
-    cmd=(certbot certonly --non-interactive --agree-tos --email "$email" --cert-name "$primary")
+    if [[ "$challenge" == "HTTP" ]]; then
+        cmd=(certbot certonly --non-interactive --agree-tos --email "$email" --cert-name "$primary"
+             --standalone --preferred-challenges http)
+        log INFO "HTTP challenge — port 80 must be free (no API key needed)."
+    elif [[ "$DNS_BACKEND" == "cloudflare" ]]; then
+        read -ra cf_args <<< "$(cloudflare_certbot_args)"
+        cloudflare_prepare_env
+        cmd=(certbot certonly --non-interactive --agree-tos --email "$email" --cert-name "$primary")
+        cmd+=("${cf_args[@]}")
+        log INFO "DNS challenge — Cloudflare API (automatic)."
+    else
+        print_manual_dns_banner
+        cmd=(certbot certonly --agree-tos --email "$email" --cert-name "$primary"
+             --manual --preferred-challenges dns)
+        log INFO "DNS challenge — manual TXT record (no API key)."
+    fi
+
     if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--dry-run); fi
     if [[ "$FORCE" -eq 1 ]];  then cmd+=(--force-renewal); fi
     for d in "${DOMAINS[@]}"; do cmd+=(-d "$d"); done
 
-    if [[ "$challenge" == "DNS" ]]; then
-        cloudflare_prepare_env
-        cmd+=("${args[@]}")
-    else
-        cmd+=(--standalone --preferred-challenges http)
-        log INFO "HTTP challenge — port 80 must be free (no API key needed)."
-    fi
-
     log INFO "Issuing certificate via certbot (${challenge} challenge)..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
-    else
-        local rc=0
-        "${cmd[@]}" || rc=$?
         _set_certbot_paths "$primary"
-        if [[ "$rc" -ne 0 ]]; then
-            if [[ -e "$SRC_FULLCHAIN" && -e "$SRC_PRIVKEY" ]]; then
-                log WARN "Certificate already valid — deploying existing cert."
-            else
-                die "certbot failed. Check: /var/log/letsencrypt/letsencrypt.log"
-            fi
-        fi
+        return
     fi
+
+    local rc=0
+    "${cmd[@]}" || rc=$?
+    [[ "$DNS_BACKEND" == "manual" && "$rc" -eq 0 ]] && wait_after_manual_dns
+    _certbot_issue_result "$primary" "$rc"
 }
 
 issue_acme_sh() {
@@ -110,30 +125,40 @@ issue_acme_sh() {
     local d challenge="HTTP"
 
     if _use_dns_challenge; then
-        detect_dns_provider || die "Wildcard/DNS mode needs CF_Token."
         challenge="DNS"
+        DNS_BACKEND="$(resolve_dns_backend)"
     fi
 
     cmd=("$acme" --issue)
     for d in "${DOMAINS[@]}"; do cmd+=(-d "$d"); done
-    if [[ "$challenge" == "DNS" ]]; then
-        cloudflare_prepare_env
-        cmd+=(--dns "$DNS_ACME_HOOK")
-    else
+
+    if [[ "$challenge" == "HTTP" ]]; then
         cmd+=(--standalone)
         log INFO "HTTP challenge — port 80 must be free (no API key needed)."
+    elif [[ "$DNS_BACKEND" == "cloudflare" ]]; then
+        cloudflare_prepare_env
+        cmd+=(--dns "$DNS_ACME_HOOK")
+        log INFO "DNS challenge — Cloudflare API (automatic)."
+    else
+        print_manual_dns_banner
+        cmd+=(--dns --yes-I-know-dns-manual-mode-enough-go-ahead-please)
+        log INFO "DNS challenge — manual TXT record (no API key)."
     fi
+
     if [[ "$FORCE" -eq 1 ]]; then cmd+=(--force); fi
     if [[ "$DRY_RUN" -eq 1 ]]; then cmd+=(--test); fi
 
     log INFO "Issuing certificate via acme.sh (${challenge} challenge)..."
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log DRY-RUN "Would run: ${cmd[*]}"
-    else
-        if ! "${cmd[@]}"; then
-            die "acme.sh failed."
-        fi
+        _set_acme_paths "$primary"
+        return
     fi
+
+    if ! "${cmd[@]}"; then
+        die "acme.sh failed."
+    fi
+    [[ "$DNS_BACKEND" == "manual" ]] && wait_after_manual_dns
     _set_acme_paths "$primary"
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AutoSSL — shared utilities
 
-AUTOSSL_VERSION="2.3.2"
+AUTOSSL_VERSION="2.4.0"
 AUTOSSL_BASE="${AUTOSSL_BASE:-/etc/autossl}"
 AUTOSSL_CERTS="${AUTOSSL_BASE}/certs"
 AUTOSSL_STATE="${AUTOSSL_BASE}/state"
