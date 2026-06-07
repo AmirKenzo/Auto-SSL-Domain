@@ -1,3 +1,5 @@
-
-ok.py
-ss.sh
+*.log
+.env
+/etc/
+*.ini
+!config/*.example
