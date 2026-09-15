@@ -1,6 +1,6 @@
 # AutoSSL
 
-Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzban**, **Pasarguard**, and manual deployment.
+Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzban**, **Pasarguard**, **PasarguardBot**, and manual deployment.
 
 > No Python required — works on any Linux server with Bash.
 
@@ -9,8 +9,8 @@ Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzb
 - **Certificate issuance** via `certbot` or `acme.sh` (auto-detected)
 - **Single domain**, **SAN (multiple domains)**, and **wildcard** (`*.example.com`)
 - **DNS challenge** for wildcards with pluggable DNS providers (Cloudflare first)
-- **Panel integration**: Marzban, Pasarguard, or manual/custom path
-- **Interactive CLI** with numeric panel selection (1/2/3)
+- **Panel integration**: Marzban, Pasarguard, PasarguardBot, or manual/custom path
+- **Interactive CLI** with numeric panel selection (1/2/3/4)
 - **Manual renewal** via `autossl renew` (no background service)
 - **Expiration checker**, logging, dry-run mode
 - **Backup** existing certificates before overwrite
@@ -122,11 +122,12 @@ sudo autossl uninstall    # remove tool (asks before deleting config)
 
 ## Deployment Paths
 
-| Panel       | Path                                      |
-|-------------|-------------------------------------------|
-| Marzban     | `/var/lib/marzban/certs/<domain>/`        |
-| Pasarguard  | `/var/lib/pasarguard/certs/<domain>/`     |
-| None        | `/etc/autossl/certs/<domain>/` or custom  |
+| Panel         | Path                                        |
+|---------------|----------------------------------------------|
+| Marzban       | `/var/lib/marzban/certs/<domain>/`          |
+| Pasarguard    | `/var/lib/pasarguard/certs/<domain>/`       |
+| PasarguardBot | `/var/lib/pasarguardbot/certs/<domain>/`    |
+| None          | `/etc/autossl/certs/<domain>/` or custom    |
 
 Each domain folder:
 
@@ -134,6 +135,14 @@ Each domain folder:
 fullchain.pem
 privkey.pem
 ```
+
+### PasarguardBot
+
+Unlike Marzban/Pasarguard, selecting **PasarguardBot** also wires the certificate into the bot itself:
+
+- If PasarguardBot is installed at `/opt/pasarguardbot` (its `.env` file exists), AutoSSL sets `SSL_CERTFILE` and `SSL_KEYFILE` in `/opt/pasarguardbot/.env` to point at the deployed `fullchain.pem`/`privkey.pem`, then runs `pasarguardbot restart` to apply it (HTTPS in PasarguardBot's API server).
+- If PasarguardBot isn't found at that path, AutoSSL only deploys the cert files and logs a message asking you to set `SSL_CERTFILE`/`SSL_KEYFILE` manually.
+- This also happens automatically on `autossl renew` for any domain tracked with the PasarguardBot panel.
 
 ## Cloudflare API (optional)
 

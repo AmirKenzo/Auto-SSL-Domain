@@ -21,6 +21,7 @@ renew_one() {
         set -e
         [[ "$rc" -ne 0 ]] && { log ERROR "Redeploy failed: ${primary}"; return 1; }
         log INFO "Redeployed to ${deploy_path}"
+        panel_post_deploy "$panel" "$deploy_path"
     fi
 
     save_cert_state "$primary" "$domains" "$panel" "$deploy_path" "$ISSUER_BACKEND"

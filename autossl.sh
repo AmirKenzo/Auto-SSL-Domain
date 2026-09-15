@@ -152,6 +152,8 @@ cmd_issue() {
         die "Deployment failed."
     fi
 
+    panel_post_deploy "$PANEL_NAME" "$PANEL_TARGET"
+
     progress 4 4 "Done"
     domains_str="$(domains_to_string)"
     save_cert_state "$primary" "$domains_str" "$PANEL_NAME" "$PANEL_TARGET" "$ISSUER_BACKEND"

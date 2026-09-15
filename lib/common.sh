@@ -55,6 +55,17 @@ command_exists() {
     command -v "$1" &>/dev/null
 }
 
+# set_env_var: set or replace a KEY=value line in a plain .env-style file
+# (uncomments and rewrites the line if the key already exists, commented or not)
+set_env_var() {
+    local file="$1" key="$2" value="$3"
+    if grep -qE "^[[:space:]]*#?[[:space:]]*${key}=" "$file"; then
+        sed -i -E "s|^[[:space:]]*#?[[:space:]]*${key}=.*|${key}=${value}|" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" >> "$file"
+    fi
+}
+
 is_linux() {
     [[ -f /etc/os-release ]]
 }
