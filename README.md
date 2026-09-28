@@ -1,6 +1,6 @@
 # AutoSSL
 
-Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzban**, **Pasarguard**, **PasarguardBot**, and manual deployment.
+Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzban**, **Pasarguard**, **PasarguardBot**, **PG-Node**, and manual deployment.
 
 > No Python required — works on any Linux server with Bash.
 
@@ -9,7 +9,7 @@ Production-ready **pure Bash** Let's Encrypt certificate automation with **Marzb
 - **Certificate issuance** via `certbot` or `acme.sh` (auto-detected)
 - **Single domain**, **SAN (multiple domains)**, and **wildcard** (`*.example.com`)
 - **DNS challenge** for wildcards with pluggable DNS providers (Cloudflare first)
-- **Panel integration**: Marzban, Pasarguard, PasarguardBot, or manual/custom path
+- **Panel integration**: Marzban, Pasarguard, PasarguardBot, PG-Node, or manual/custom path
 - **Interactive CLI** with numeric panel selection (1/2/3/4)
 - **Manual renewal** via `autossl renew` (no background service)
 - **Expiration checker**, logging, dry-run mode
@@ -41,7 +41,7 @@ sudo autossl issue
 ```bash
 sudo autossl issue
 # Enter: example.com
-# Choice [1-3]: 1   (Marzban)
+# Choice [1-5]: 2   (Marzban)
 ```
 
 ### Multiple domains (SAN)
@@ -127,6 +127,7 @@ sudo autossl uninstall    # remove tool (asks before deleting config)
 | Marzban       | `/var/lib/marzban/certs/<domain>/`          |
 | Pasarguard    | `/var/lib/pasarguard/certs/<domain>/`       |
 | PasarguardBot | `/var/lib/pasarguardbot/certs/<domain>/`    |
+| PG-Node       | `/var/lib/pg-node/certs/<domain>/`          |
 | None          | `/etc/autossl/certs/<domain>/` or custom    |
 
 Each domain folder:
